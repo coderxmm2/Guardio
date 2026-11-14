@@ -14,12 +14,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Find Android project
+      - name: Extract Guardio project
         shell: bash
         run: |
-          GRADLE_FILE=$(find . -type f -name gradlew -not -path '*/.git/*' -print -quit)
+          ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" -print -quit)
+          if [ -z "$ZIP" ]; then
+            echo "ERROR: No ZIP file found in repository."
+            exit 1
+          fi
+          mkdir extracted
+          unzip -q "$ZIP" -d extracted
+          GRADLE_FILE=$(find extracted -type f -name gradlew -print -quit)
           if [ -z "$GRADLE_FILE" ]; then
-            echo "ERROR: gradlew not found. Upload the ZIP contents."
+            echo "ERROR: No Gradle wrapper found inside ZIP."
+            find extracted -maxdepth 3 -type f | head -50
             exit 1
           fi
           PROJECT_DIR=$(dirname "$GRADLE_FILE")
@@ -32,12 +40,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Grant Gradle permission
-        run: chmod +x "$PROJECT_DIR/gradlew"
-
       - name: Build Guardio APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: ./gradlew assembleDebug --stacktrace
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload Guardio APK
         uses: actions/upload-artifact@v4
