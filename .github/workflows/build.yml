@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,17 +18,22 @@ jobs:
         shell: bash
         run: |
           ZIP=$(find . -maxdepth 3 -type f -iname "*.zip" -print -quit)
+
           if [ -z "$ZIP" ]; then
             echo "ERROR: Guardio ZIP not found"
             exit 1
           fi
+
           mkdir -p extracted
           unzip -q "$ZIP" -d extracted
+
           GRADLE_FILE=$(find extracted -type f -name gradlew -print -quit)
+
           if [ -z "$GRADLE_FILE" ]; then
             echo "ERROR: gradlew not found inside ZIP"
             exit 1
           fi
+
           PROJECT_DIR=$(dirname "$GRADLE_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Found project: $PROJECT_DIR"
@@ -40,6 +46,11 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses || true
 
       - name: Build Guardio APK
         working-directory: ${{ env.PROJECT_DIR }}
