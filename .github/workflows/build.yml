@@ -43,14 +43,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Locate Android SDK
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          SDK_DIR="/usr/local/lib/android/sdk"
+
+          SDKMANAGER=$(find "$SDK_DIR/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager not found"
+            exit 1
+          fi
+
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$SDK_DIR/platform-tools" >> "$GITHUB_PATH"
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+
       - name: Accept Android SDK licenses
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          yes | "$SDKMANAGER" --licenses || true
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build Guardio APK
         working-directory: ${{ env.PROJECT_DIR }}
